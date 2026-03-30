@@ -1,67 +1,66 @@
 (function() {
-    // 1. OBFUSCATION (Menyamarkan Link)
-    // Gunakan atob() untuk mengubah Base64 menjadi URL asli
-    // aHR0cHM6Ly93d3cud2lraXBlZGlhLm9yZw== -> https://www.wikipedia.org
-    // aHR0cHM6Ly93d3cuZ2l0aHViLmNvbQ== -> https://www.github.com
-    const adUrl1 = atob("aHR0cHM6Ly93d3cud2lraXBlZGlhLm9yZw=="); 
-    const adUrl2 = atob("aHR0cHM6Ly93d3cuZ2l0aHViLmNvbQ==");
+    // 1. OBFUSCATION (Sembunyikan URL)
+    const adUrl1 = atob("aHR0cHM6Ly93d3cud2lraXBlZGlhLm9yZw=="); // Iklan 1
+    const adUrl2 = atob("aHR0cHM6Ly93d3cuZ2l0aHViLmNvbQ=="); // Iklan 2
 
-    // 2. FREQUENCY CAPPING (Agar user nggak curiga)
-    // Cek apakah hari ini user sudah kena jebakan iklan?
     function isAdShown() {
         return localStorage.getItem("ad_triggered") === "true";
     }
 
-    // 3. DYNAMIC INJECTION (Membangun jebakan via JS, bukan HTML)
     function injectAdsTrap() {
-        if (isAdShown()) return; // Kalau sudah pernah kena, hentikan fungsi.
+        if (isAdShown()) return;
 
-        // Bikin elemen div transparan raksasa penutup layar
-        const trap = document.createElement("div");
+        // 2. THE HYBRID TRICK
+        // Kita BUKAN bikin DIV, tapi bikin tag Link (Anchor <a>)
+        const trap = document.createElement("a");
+        
+        // Iklan 1 dimasukkan langsung ke atribut HTML (Lolos deteksi)
+        trap.href = adUrl1;
+        trap.target = "_blank"; // Buka di tab baru
         trap.id = "invisible-shield";
         
-        // Styling CSS langsung di JS agar tidak ada jejak di style.css
+        // Bikin transparan dan tutupi layar
         Object.assign(trap.style, {
             position: "fixed",
             top: "0",
             left: "0",
             width: "100vw",
             height: "100vh",
-            zIndex: "999999", // Paling atas menutupi semua tombol
-            background: "rgba(0,0,0,0)", // 100% Transparan
-            cursor: "pointer"
+            zIndex: "999999",
+            background: "rgba(0,0,0,0)", // Transparan
+            cursor: "pointer",
+            display: "block"
         });
 
-        // Masukkan ke dalam HTML (Body)
         document.body.appendChild(trap);
 
-        // 4. EVENT LISTENER (Saat dijebak)
+        // 3. EVENT LISTENER UNTUK IKLAN KEDUA
         trap.addEventListener("click", function(e) {
-            e.preventDefault(); // Mencegah fungsi klik standar
+            // PERHATIAN: Kita TIDAK memakai e.preventDefault() di sini!
+            // Kita biarkan browser mengeksekusi Iklan 1 lewat trap.href secara alami.
 
-            // Buka 2 Tab Sekaligus
-            window.open(adUrl1, '_blank');
+            // Pada saat sepersekian milidetik yang sama, JS menembak Iklan 2
             window.open(adUrl2, '_blank');
 
-            // Hapus jebakan dari halaman, agar tombol asli bisa diklik
-            trap.remove();
+            // Hapus jebakan setelah diklik (pakai delay dikit biar browser nggak bingung)
+            setTimeout(() => {
+                trap.remove();
+            }, 100);
 
-            // Set LocalStorage agar iklan tidak muncul lagi hari ini
-            // (Atau atur timer misalnya 1 jam kemudian baru muncul lagi)
+            // Set localStorage agar tidak spam
             localStorage.setItem("ad_triggered", "true");
             
-            // Opsi: Reset timer setelah 1 jam (3600000 ms)
+            // Reset timer 1 jam kemudian
             setTimeout(() => {
                 localStorage.removeItem("ad_triggered");
-                injectAdsTrap(); // Pasang jebakan lagi
+                injectAdsTrap();
             }, 3600000); 
         });
     }
 
-    // Tunggu sampai seluruh web selesai di-load, baru jalankan script
-    window.addEventListener('DOMContentLoaded', (event) => {
-        // Beri sedikit delay (misal 1 detik) agar tidak terlihat agresif oleh Adblock
-        setTimeout(injectAdsTrap, 1000);
+    // Tunggu DOM selesai loading
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(injectAdsTrap, 800);
     });
 
 })();
